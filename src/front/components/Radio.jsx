@@ -6,6 +6,7 @@ import FileComponent from './File'
 const Radio = () => {
   const [selectedOption, setSelectedOption] = useState("");
   const [files, setFiles] = useState([]);
+  const [file, setFile] = useState("");
   const [connected, setConnected] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -19,6 +20,7 @@ const Radio = () => {
 
   const handleFileChange = (event) => {
     const files = event.target.files;
+    setFile(files[0].name);
     if (files.length > 0) {
       console.log("Archivo seleccionado:", files[0].name);
     }
@@ -127,7 +129,8 @@ const Radio = () => {
 
       <div className={"content-display"}>
         {selectedOption === "Cliente" && (
-          <div className="option-content">
+          <>
+                    <div className="option-content">
             {/* Botón que abre el navegador de archivos */}
             <button className="cliente-button" onClick={handleFileButtonClick}>
             </button>
@@ -140,6 +143,17 @@ const Radio = () => {
               onChange={handleFileChange}
             />
           </div>
+
+          {file !== "" && (
+            <>
+            <FileComponent
+              fileName={file}
+              downloadable = {false}
+            />
+            <button onClick={handleUploadFile}>Subir archivo al servidor FTP</button>
+            </>
+          )}
+          </>
         )}
           {selectedOption === "Servidor" && (
             <div className="option-content">

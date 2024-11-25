@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import '../styles/File.css';
 import downloadIcon from '../../assets/download.png';
 
-const FileComponent = ({ fileName }) => {
+const FileComponent = ({ fileName, downloadable = true }) => {
   const [icon, setIcon] = useState(null);
 
   const getFileIcon = async (fileName) => {
@@ -55,7 +55,10 @@ const FileComponent = ({ fileName }) => {
     <div className="file-item">
       <img src={icon} alt="file icon" className='file-icon'/>
       <span className="file-name">{fileName}</span>
-      <img src={downloadIcon} alt="download icon" className="download-icon" />
+      {downloadable && (
+        <img src={downloadIcon} alt="download icon" className="download-icon" />
+      )}
+      
     </div>
   );
 };
