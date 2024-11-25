@@ -1,9 +1,14 @@
 import React, { useRef, useState } from "react";
 import "../styles/radio.css";
+import FileComponent from './File'
+
 
 const Radio = () => {
   const [selectedOption, setSelectedOption] = useState("");
+  const [files, setFiles] = useState([]);
+  const [connected, setConnected] = useState(false);
   const fileInputRef = useRef(null);
+
   const handleRadioChange = (e) => {
     setSelectedOption(e.target.value);
   };
@@ -16,6 +21,64 @@ const Radio = () => {
     const files = event.target.files;
     if (files.length > 0) {
       console.log("Archivo seleccionado:", files[0].name);
+    }
+  };
+
+  const handleServerConnect = async () => {
+    try {
+      console.log("Conectando al servidor...");
+      const response = await fetch("http://localhost:3000/server/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      console.log(data);
+      if (response.ok) {
+        setConnected(true);
+        //alert('Conectado al servidor');
+        getServerFiles(); // Obtener archivos del servidor
+      } else {
+        //alert('Error al conectar al servidor');
+      }
+    } catch (error) {
+      console.error("Error al conectar al servidor:", error);
+    }
+  };
+
+  const handleServerDisconnect = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/server/stop", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+      const data = await response.json();
+      console.log(data);
+      if (response.ok) {
+        setConnected(false);
+        //alert('Desconectado del servidor');
+      }
+    } catch (error) {
+      console.error("Error al desconectar del servidor:", error);
+    }
+  }
+
+  const getServerFiles = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/server/files");
+      const data = await response.json();
+      console.log(data);
+      if (response.ok) {
+        setFiles(data.data);
+        console.log("Archivos en el servidor:", data.data);
+      } else {
+        console.error("Error al obtener los archivos del servidor:", data.error);
+      }
+    } catch (error) {
+      console.error("Error al obtener los archivos del servidor:", error);
     }
   };
 
@@ -78,11 +141,18 @@ const Radio = () => {
             />
           </div>
         )}
-        {selectedOption === "Servidor" && (
-          <div className="option-content">
-            <button className="servidor-button">Conectar a un servidor FTP</button>
-          </div>
-        )}
+          {selectedOption === "Servidor" && (
+            <div className="option-content">
+              <button className="servidor-button" onClick={connected ? handleServerDisconnect : handleServerConnect}>
+                {connected ? "Desconectar del servidor FTP" : "Conectar a un servidor FTP"}
+              </button>
+              {connected && (
+                files.map((file, index) => {
+                  return <FileComponent key={index} fileName={file.name}></FileComponent>
+                })
+              )}
+            </div>
+          )}
         {selectedOption === "FTP" && (
           <div className="option-content ftp-info">
             <h3>File Transfer Protocol</h3>
