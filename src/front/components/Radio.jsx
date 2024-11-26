@@ -1,21 +1,67 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "../styles/radio.css";
-import FileComponent from './File'
-
+import FileComponent from './File';
 
 const Radio = () => {
   const [selectedOption, setSelectedOption] = useState("");
   const [files, setFiles] = useState([]);
   const [file, setFile] = useState("");
+  const [clientConnected, setClientConnected] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [error, setError] = useState('');
   const fileInputRef = useRef(null);
+
+  const handleClientConnect = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/client/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        console.log('Conectado al servidor');
+        setClientConnected(true);
+        await getFiles();
+      } else {
+        setError(data.error || 'Error al conectar como cliente FTP');
+      }
+    } catch (error) {
+      setError("Error al conectar como cliente FTP: " + error.message);
+    }
+  };
+
+  const handleClientDisconnect = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/client/disconnect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        console.log('Desconectado del servidor');
+        setFiles([]);
+        setClientConnected(false);
+      } else {
+        setError(data.error || 'Error al desconectar como cliente FTP');
+      }
+    } catch (error) {
+      setError("Error al desconectar como cliente FTP: " + error.message);
+    }
+  };
 
   const handleRadioChange = (e) => {
     setSelectedOption(e.target.value);
+    setError(''); // Clear error message when changing option
   };
 
   const handleFileButtonClick = () => {
-    fileInputRef.current.click(); 
+    fileInputRef.current.click();
   };
 
   const handleFileChange = (event) => {
@@ -23,6 +69,21 @@ const Radio = () => {
     setFile(files[0].name);
     if (files.length > 0) {
       console.log("Archivo seleccionado:", files[0].name);
+    }
+  };
+
+  const getFiles = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/server/files");
+      const data = await response.json();
+      if (response.ok) {
+        setFiles(data.data);
+        console.log("Archivos en el servidor:", data.data);
+      } else {
+        setError(data.error || 'Error al obtener los archivos del servidor');
+      }
+    } catch (error) {
+      setError("Error al obtener los archivos del servidor: " + error.message);
     }
   };
 
@@ -36,51 +97,40 @@ const Radio = () => {
         },
       });
       const data = await response.json();
-      console.log(data);
       if (response.ok) {
+        console.log('servidor conectado');
         setConnected(true);
-        //alert('Conectado al servidor');
-        getServerFiles(); // Obtener archivos del servidor
+        console.log("Archivos en el servidor:", files);
       } else {
-        //alert('Error al conectar al servidor');
+        setError(data.error || 'Error al conectar al servidor FTP');
       }
     } catch (error) {
-      console.error("Error al conectar al servidor:", error);
+      setError("Error al conectar al servidor FTP: " + error.message);
     }
+  };
+
+  const handleUploadFile = async () => {
+    // Implementaci��n de la función para subir archivos
   };
 
   const handleServerDisconnect = async () => {
     try {
-      const response = await fetch("http://localhost:3000/server/stop", {
+      const response = await fetch('http://localhost:3000/server/stop', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-      })
-      const data = await response.json();
-      console.log(data);
+      });
       if (response.ok) {
         setConnected(false);
-        //alert('Desconectado del servidor');
-      }
-    } catch (error) {
-      console.error("Error al desconectar del servidor:", error);
-    }
-  }
-
-  const getServerFiles = async () => {
-    try {
-      const response = await fetch("http://localhost:3000/server/files");
-      const data = await response.json();
-      console.log(data);
-      if (response.ok) {
-        setFiles(data.data);
-        console.log("Archivos en el servidor:", data.data);
+        setClientConnected(false);
+        setFiles([]);
       } else {
-        console.error("Error al obtener los archivos del servidor:", data.error);
+        const data = await response.json();
+        setError(data.error || 'Error al desconectar del servidor FTP');
       }
     } catch (error) {
-      console.error("Error al obtener los archivos del servidor:", error);
+      setError("Error al desconectar del servidor FTP: " + error.message);
     }
   };
 
@@ -128,45 +178,45 @@ const Radio = () => {
       </div>
 
       <div className={"content-display"}>
+        
         {selectedOption === "Cliente" && (
-          <>
-                    <div className="option-content">
-            {/* Botón que abre el navegador de archivos */}
-            <button className="cliente-button" onClick={handleFileButtonClick}>
-            </button>
-
-            {/* Input oculto para seleccionar archivos */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-            />
+          <div className="option-content">
+            {!clientConnected ? (
+              <button onClick={handleClientConnect}>Conectarse como cliente FTP</button>
+            ) : (
+              <>
+                <div className="client-actions">
+                  <button onClick={handleClientDisconnect}>Desconectarse como cliente FTP</button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: "none" }}
+                    onChange={handleFileChange}
+                  />
+                  <button className="cliente-button" onClick={handleFileButtonClick}></button>
+                </div>
+                {file !== "" && (
+                  <>
+                    <FileComponent fileName={file} downloadable={false} />
+                    <button onClick={handleUploadFile}>Subir archivo al servidor FTP</button>
+                  </>
+                )}
+              </>
+            )}
           </div>
-
-          {file !== "" && (
-            <>
-            <FileComponent
-              fileName={file}
-              downloadable = {false}
-            />
-            <button onClick={handleUploadFile}>Subir archivo al servidor FTP</button>
-            </>
-          )}
-          </>
         )}
-          {selectedOption === "Servidor" && (
-            <div className="option-content">
-              <button className="servidor-button" onClick={connected ? handleServerDisconnect : handleServerConnect}>
-                {connected ? "Desconectar del servidor FTP" : "Conectar a un servidor FTP"}
-              </button>
-              {connected && (
-                files.map((file, index) => {
-                  return <FileComponent key={index} fileName={file.name}></FileComponent>
-                })
-              )}
-            </div>
-          )}
+        {selectedOption === "Servidor" && (
+          <div className="option-content">
+            <button className="servidor-button" onClick={connected ? handleServerDisconnect : handleServerConnect}>
+              {connected ? "Desconectar del servidor FTP" : "Conectar a un servidor FTP"}
+            </button>
+            {connected && (
+              files.map((file, index) => {
+                return <FileComponent key={index} fileName={file.name} />;
+              })
+            )}
+          </div>
+        )}
         {selectedOption === "FTP" && (
           <div className="option-content ftp-info">
             <h3>File Transfer Protocol</h3>
@@ -184,6 +234,7 @@ const Radio = () => {
             </p>
           </div>
         )}
+        {error && <p className="error-message">{error}</p>}
       </div>
     </div>
   );

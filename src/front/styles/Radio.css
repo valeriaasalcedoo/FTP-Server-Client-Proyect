@@ -140,6 +140,11 @@ body {
     font-size: 18px;
 }
 
+.client-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
 button:hover {
     background: #37b4bf;
@@ -174,3 +179,9 @@ button.servidor-button {
     margin: 5px;
     cursor: pointer;
 }
+
+.error-message {
+    color: red;
+    font-size: 14px;
+    margin-top: 10px;
+  }
