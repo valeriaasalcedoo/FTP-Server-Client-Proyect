@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import "../styles/radio.css";
 import FileComponent from './File';
+import eventEmitter from "../../../utils/EventEmitter.js";
 
 const Radio = () => {
   const [selectedOption, setSelectedOption] = useState("");
@@ -8,8 +9,36 @@ const Radio = () => {
   const [file, setFile] = useState("");
   const [clientConnected, setClientConnected] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [reload, setReload] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleFileDeleted = async (fileName) => {
+      console.log('Evento Escuchado', fileName);
+      await getFiles(); // Recargar archivos
+    };
+
+    const handleFileUploaded = async (fileName) => {
+      console.log('Evento Escuchado', fileName);
+      await getFiles(); // Recargar archivos
+    };
+
+    eventEmitter.on('fileDeleted', handleFileDeleted);
+    eventEmitter.on('fileUploaded', handleFileUploaded);
+
+    return () => {
+      eventEmitter.off('fileDeleted', handleFileDeleted);
+      eventEmitter.off('fileUploaded', handleFileUploaded);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reload) {
+      console.log('Recargando archivos');
+      setReload(false);
+    }
+  }, [reload]);
 
   const handleClientConnect = async () => {
     try {
@@ -66,7 +95,8 @@ const Radio = () => {
 
   const handleFileChange = (event) => {
     const files = event.target.files;
-    setFile(files[0].name);
+    console.log(files);
+    setFile(files[0]);
     if (files.length > 0) {
       console.log("Archivo seleccionado:", files[0].name);
     }
@@ -110,7 +140,28 @@ const Radio = () => {
   };
 
   const handleUploadFile = async () => {
-    // Implementaci��n de la función para subir archivos
+    try {
+      console.log("Subiendo archivo al servidor...");
+      console.log(file);
+  
+      const formData = new FormData();
+      formData.append('file', file);
+      console.log(formData);
+
+      const response = await fetch('http://localhost:3000/client/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        console.log('Archivo subido correctamente');
+        eventEmitter.emit('fileUploaded', file.name); // Emitir evento
+      } else {
+        console.error('Error al subir el archivo');
+      }
+    } catch (error) {
+      console.error("Error al subir el archivo:", error.message);
+    }
   };
 
   const handleServerDisconnect = async () => {
@@ -197,7 +248,7 @@ const Radio = () => {
                 </div>
                 {file !== "" && (
                   <>
-                    <FileComponent fileName={file} downloadable={false} />
+                    <FileComponent fileName={file.name} downloadable={false} />
                     <button onClick={handleUploadFile}>Subir archivo al servidor FTP</button>
                   </>
                 )}
